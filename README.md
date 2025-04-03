@@ -1,4 +1,4 @@
-This repository contains all the code I wrote in the context of a research project about the neural underpinnings of meta-learning (see the abstract below for more details).
+This repository contains all the code I wrote in the context of a research project about the neural underpinnings of meta-learning which is currently in preparation for publication (see the abstract below for more details).
 
 The directory "Simulations" contains the code I used to test whether the models I fitted on the behavioural data could be reliably differentiated from each other given the experimental design as well as the code I used to test whether the parameters of the model that fitted the behavioural data best could be reliably estimated given the experimental design.
 
