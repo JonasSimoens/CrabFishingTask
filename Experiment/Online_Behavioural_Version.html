@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Gotta catch 'em all!'</title>
+    <script src="https://unpkg.com/jspsych@7.3.1"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-instructions@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-browser-check@1.0.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-fullscreen@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-call-function@1.1.2"></script>
+    <link href="https://unpkg.com/jspsych@7.3.1/css/jspsych.css" rel="stylesheet" type="text/css" />
+  </head>
+  <body></body>
+  <script>
+
+    var instructions = 0; // set to 0 if you wish to skip the instructions
+    var practice = 0; // set to 0 if you wish to skip the practice phase
+
+    var jsPsych = initJsPsych()
+    var timeline = []
+
+    var date = new Date();
+    var participant_number = date.getTime();
+    var round = 0;
+    var block_number = 0;
+    var trial_number = 0;
+    var fixation_width = screen.width;
+    var boat_width = screen.width / 20;
+    var fixation_radius = screen.width / 6 + screen.width / 24;
+    var fixation_angle = 0;
+    if (practice == 0){
+      var fixation_loop_count = 0
+    } else {
+      var fixation_loop_count = 180
+    }
+    var target_width = screen.width;
+    var dot_width = screen.width / 200;
+    var target_angle = 0;
+    var target_radius = 0.059 * screen.width;
+    var cage_width = screen.width * 0.1875;
+    var cage_location = 0;
+    var cage_x_coord = 0;
+    var cage_y_coord = 0;
+    var target_loop_count = 0;
+    var end_target_loop = 0;
+    var register_responses = 0;
+    var presentation_time = 0;
+    var response_time = 0;
+    var feedback_width = screen.width;
+    var crab_width = screen.width / 40;
+    var prior_sigma = 0;
+    var sampling_mu = 0;
+    var sampling_sigma = 0;
+    var crab_y_coord = screen.height / 10;
+    var heap_width = screen.width / 40;
+    var heap_x_coord = 0;
+    var heap_y_coord = 0.0975 * screen.height;
+    var heap_list = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    var feedback_loop_count = 0;
+    var end_feedback_loop = 0;
+    var meta_feedback_loop_count = 0;
+    var crab_count_list = [0, 0, 0, 0]
+    var reward_round = 0;
+    var total_reward = 0;
+
+    function normalRandom(mu, sigma){
+      var val, u, v, s, mul
+      do {
+        u = Math.random() * 2 - 1
+        v = Math.random() * 2 - 1
+        s = u * u + v * v
+      } while (s == 0 || s >= 1)
+      mul = Math.sqrt(-2 * Math.log(s) / s)
+      val = u * mul
+      return Math.round(val * sigma + mu)
+    }
+
+    function lineDraw() {
+      target_angle = target_angle + 2
+      output = "<div class = 'line' style = 'transform-origin: top left; transform: rotate(" + target_angle + "deg); width: " + target_radius * 1.25 +
+        "px; height: 1px; background: black; position: fixed; top: " + 0.165 * screen.height + "px; left: " + screen.width / 2 + "px;'></div>"
+      return output
+    }
+
+    function crabDistribution(){
+      if (Math.round(sampling_sigma / screen.width * 10000) / 100 == 6.25){
+        bottom_crab_x_coord = [-2, -1.55, -1.1, -0.75, -0.45, -0.15, 0.15, 0.45, 0.75, 1.1, 1.55, 2]
+        middle_crab_x_coord = [-1.3, -0.95, -0.6, -0.3, 0, 0.3, 0.6, 0.95, 1.3]
+        top_crab_x_coord = [-0.75, -0.45, -0.15, 0.15, 0.45, 0.75]
+        for (crab = 0; crab < 12; crab++){
+          bottom_crab_x_coord[crab] = sampling_mu + bottom_crab_x_coord[crab] * sampling_sigma - crab_width / 2
+        }
+        for (crab = 0; crab < 9; crab++){
+          middle_crab_x_coord[crab] = sampling_mu + middle_crab_x_coord[crab] * sampling_sigma - crab_width / 2
+        }
+        for (crab = 0; crab < 6; crab++){
+          top_crab_x_coord[crab] = sampling_mu - top_crab_x_coord[crab] * sampling_sigma - crab_width / 2
+        }
+        bottom_crab_y_coord = screen.height / 60
+        middle_crab_y_coord = bottom_crab_y_coord + 0.42 * crab_width
+        top_crab_y_coord = middle_crab_y_coord + 0.42 * crab_width
+      } else if (Math.round(sampling_sigma / screen.width * 10000) / 100 == 12.5){
+        bottom_crab_x_coord = [-2, -1.55, -1.3, -1.1, -0.8, -0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6, 0.8, 1.1, 1.3, 1.55, 2]
+        top_crab_x_coord = [-0.95, -0.7, -0.5, -0.3, -0.1, 0.1, 0.3, 0.5, 0.7, 0.95]
+        for (crab = 0; crab < 17; crab++){
+          bottom_crab_x_coord[crab] = sampling_mu - bottom_crab_x_coord[crab] * sampling_sigma - crab_width / 2
+        }
+        for (crab = 0; crab < 10; crab++){
+          top_crab_x_coord[crab] = sampling_mu - top_crab_x_coord[crab] * sampling_sigma - crab_width / 2
+        }
+        bottom_crab_y_coord = screen.height / 40
+        top_crab_y_coord = bottom_crab_y_coord + 0.42 * crab_width
+      } else {
+        bottom_crab_x_coord = [-2, -1.55, -1.3, -1.1, -0.95, -0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.95, 1.1, 1.3, 1.55, 2]
+        for (crab = 0; crab < 27; crab++){
+          bottom_crab_x_coord[crab] = sampling_mu - bottom_crab_x_coord[crab] * sampling_sigma - crab_width / 2
+        }
+        bottom_crab_y_coord = screen.height / 30
+      }
+
+      output = ""
+      if (Math.round(sampling_sigma / screen.width * 10000) / 100 == 6.25){
+        for (crab = 0; crab < 6; crab++){
+          output = output + "<img src = 'Images/Crab.png' style = 'width: " + crab_width + "px; " +
+            "position: fixed; left: " + top_crab_x_coord[crab] + "px; bottom: " + top_crab_y_coord + "px'></img>"
+        }
+        for (crab = 0; crab < 9; crab++){
+          output = output + "<img src = 'Images/Crab.png' style = 'width: " + crab_width + "px; " +
+            "position: fixed; left: " + middle_crab_x_coord[crab] + "px; bottom: " + middle_crab_y_coord + "px'></img>"
+        }
+        for (crab = 0; crab < 12; crab++){
+          output = output + "<img src = 'Images/Crab.png' style = 'width: " + crab_width + "px; " +
+            "position: fixed; left: " + bottom_crab_x_coord[crab] + "px; bottom: " + bottom_crab_y_coord + "px'></img>"
+        }
+        return output
+      } else if (Math.round(sampling_sigma / screen.width * 10000) / 100 == 12.5){
+        for (crab = 0; crab < 10; crab++){
+          output = output + "<img src = 'Images/Crab.png' style = 'width: " + crab_width + "px; " +
+            "position: fixed; left: " + top_crab_x_coord[crab] + "px; bottom: " + top_crab_y_coord + "px'></img>"
+        }
+        for (crab = 0; crab < 17; crab++){
+          output = output + "<img src = 'Images/Crab.png' style = 'width: " + crab_width + "px; " +
+            "position: fixed; left: " + bottom_crab_x_coord[crab] + "px; bottom: " + bottom_crab_y_coord + "px'></img>"
+        }
+        return  output
+      } else {
+        for (crab = 0; crab < 27; crab++){
+          output = output + "<img src = 'Images/Crab.png' style = 'width: " + crab_width + "px; " +
+            "position: fixed; left: " + bottom_crab_x_coord[crab] + "px; bottom: " + bottom_crab_y_coord + "px'></img>"
+        }
+        return output
+      }
+    }
+
+    function heapDistribution(){
+      output = ""
+      for (heap = 0; heap < 10; heap++){
+        output = output + "<img src = 'Images/Heap.png' style = 'width: " + heap_width + "px; position: fixed; left: " + heap_list[heap] + "px; bottom: " + heap_y_coord + "px'></img>"
+      }
+      return output
+    }
+
+    var min_sigma = 0.0625 * screen.width;
+    var med_sigma = 0.125 * screen.width;
+    var max_sigma = 0.1875 * screen.width;
+
+    var tempo_list = [0.0625, 0.03125, 0.0625, 0.09375, 0.125, 0.15625, 0.1875, 0.21875, 0.1875, 0.15625, 0.125, 0.09375]
+    var start_point = jsPsych.randomization.sampleWithoutReplacement([0, 2, 4, 6, 8, 10], 1)[0]
+    var first_part = tempo_list.slice(start_point, 12)
+    var second_part = tempo_list.slice(0, start_point)
+    var tempo_list = first_part.concat(second_part)
+
+    var fixation_angle_list = []
+    var prior_sigma_list = []
+    var sampling_sigma_list = []
+    for (block = 0; block < 12; block++){
+      fixation_angle_list.push((block + 1) * 30)
+      prior_sigma_list.push(tempo_list[block] * screen.width)
+      sampling_sigma_list.push((0.250 - tempo_list[block]) * screen.width)
+    }
+
+    var sample_list = [0, 2, 4, 6, 8, 10]
+    var block_list = jsPsych.randomization.shuffle(sample_list)
+    for (block = 1; block < 6; block++){
+      do {
+        sample_list = jsPsych.randomization.shuffle(sample_list)
+      } while (block_list[block_list.length - 1] == sample_list[0])
+      for (index = 0; index < 6; index++){
+        block_list.push(sample_list[index])
+      }
+    }
+    var sample_list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    for (block = 0; block < 6; block++){
+      do {
+        sample_list = jsPsych.randomization.shuffle(sample_list)
+      } while (block_list[block_list.length - 1] == sample_list[0])
+      for (index = 0; index < 12; index++){
+        block_list.push(sample_list[index])
+      }
+    }
+
+    timeline.push({
+      type: jsPsychBrowserCheck,
+      inclusion_function: (data) => {
+        return data.browser != "firefox" && Math.round(screen.width / screen.height * 100) / 100 == 1.78 && data.vsync_rate >= 55 && data.vsync_rate <= 65 && data.mobile == false
+      },
+      exclusion_message: (data) => {
+        if(data.browser == "firefox"){
+          return "<p>Firefox is een ongeschikte browser voor dit experiment.</p>"
+        } else if (Math.round(screen.width / screen.height * 100) / 100 != 1.78){
+          return "<p>De resolutie van je scherm is ongeschikt voor dit experiment.</p>"
+        } else if (data.vsync_rate <= 55 || data.vsync_rate >= 65){
+          return "<p>De refresh rate van je scherm is ongeschikt voor dit experiment.</p>"
+        } else if (data.mobile == true){
+          return "<p>Deelname aan dit experiment kan enkel met een pc of laptop.</p>"
+        }
+      }
+    })
+
+    timeline.push({
+      type: jsPsychPreload,
+      images: ["Images/Left_1.png", "Images/Left_2.png", "Images/Right_1.png", "Images/Right_2.png", "Images/Right_3.png",
+        "Images/Fixation.png", "Images/Boat.png", "Images/Target.png", "Images/Dot.png", "Images/Cage.png", "Images/Feedback.png", "Images/Crab.png", "Images/Heap.png"]
+    })
+
+    timeline.push({
+      type: jsPsychFullscreen,
+      fullscreen_mode: true,
+      message: "<p>Klik op de 'Toestaan'-knop hieronder om het experiment toe te staan over te schakelen op fullscreen modus.</p>",
+      button_label: "Toestaan"
+    })
+
+    var exit_fullscreen = {
+      type: jsPsychFullscreen,
+      fullscreen_mode: false
+    }
+
+    if (instructions == 1){
+      timeline.push({
+        type: jsPsychInstructions,
+        pages: ["<p>Welkom in dit experiment!</p><p>Klik op de 'Volgende'-knop hieronder om te beginnen.</p>",
+
+          "<p>INFORMED CONSENT</p><p>Ik verklaar hierbij dat ik, als deelnemer aan een experiment aan de Vakgroep Experimentele Psychologie van de Universiteit Gent,</p><p>(1) totaal uit " +
+          "vrije wil deelneem aan het wetenschappelijk onderzoek,</p><p>(2) de toestemming geef aan de experimentleider om mijn resultaten op anonieme wijze te bewaren, te verwerken en "+
+          "te rapporteren,</p><p>(3) op de hoogte ben van de mogelijkheid om mijn deelname aan het onderzoek op ieder moment stop te zetten en dit zonder opgave van reden,</p><p>(4) " +
+          "ervan op de hoogte ben dat ik op aanvraag een samenvatting van de onderzoeksbevindingen kan krijgen.</p><p>Klik op de 'Volgende'-knop hieronder om hiermee akkoord te gaan.</p>",
+
+          "<p>Zo dadelijk ga je deelnemen aan een wedstrijd krabben vangen. Tijdens de wedstrijd gaan wij je naar verschillende locaties rond een eiland varen met een boot (zie de linker " +
+          "afbeelding hieronder), waar jij krabben zal proberen vangen door tien kooi&#235;n te laten vallen (zie de rechter afbeelding hieronder).</p><p>Je kan een kooi opschuiven naar " +
+          "links en naar rechts met respectievelijk de f-toets en de j-toets (je kan de toets ingedrukt houden om de kooi sneller op te schuiven). Eens je een kooi geplaats hebt, kan je " +
+          "ze laten vallen met de spatiebalk. Terwijl de kooi aan het zinken is, zullen vijf krabben uit &eacute;&eacute;n plaats in het zand kruipen, waar ze een klein zandhoopje zullen " +
+          "achterlaten. Elk van de vijf krabben zal ofwel gevangen worden door de zinkende kooi ofwel weglopen.</p><img src = 'Images/Left_1.png' style = 'width: " + target_width / 4 +
+          "px'></img> <img src = 'Images/Right_1.png' style = 'width: " + target_width / 4 + "px'></img>",
+
+          "<p>Krabben rond dit eiland leven in groepen, met meer krabben in het centrum dan aan de buitenkanten van de groep (zie de rechter afbeelding hieronder). De meeste krabben " +
+          "zullen dus dichtbij het centrum van hun groep uit het zand kruipen, ook al zullen sommigen dit dichtbij de buitenkant ervan doen. <b>Je zoekt dus best het centrum van de groep " +
+          "en laat de kooi&#235;n daar recht boven vallen.</p><p>Terwijl je krabben aan het vangen bent op een gegeven locatie zal de lokale groep krabben zich niet verplaatsen, waardoor " +
+          "het centrum van de groep zich op een vaste locatie op het scherm zal bevinden.</b> Wanneer je klaar bent met krabben vangen op een gegeven locatie, zal de lokale groep " +
+          "krabben, alsook de tien plaatsen waar krabben uit het zand gekropen zijn, zichtbaar gemaakt worden vooraleer we je naar de volgende locatie zullen varen (zie de rechter " +
+          "afbeelding hieronder). <b>Echter, als we je later terugbrengen naar dezelfde locatie, zal de lokale groep krabben zich waarschijnlijk wel verplaatst hebben terwijl je weg " +
+          "was.</b></p><p>Op verschillende locaties rond het eiland, kunnen groepen krabben verschillende groottes hebben. <b>Op sommige locaties rond het eiland zullen krabben dus meer " +
+          "verspreid over het scherm uit het zand kruipen dan op andere. Je onthoudt dus best waar rond het eiland je krabben aan het vangen bent. </b>De radar bovenaan het scherm kan je " +
+          "hierbij helpen.</p><img src = 'Images/Left_1.png' style = 'width: " + target_width / 4 + "px'></img> <img src = 'Images/Right_2.png' style = 'width: " + target_width / 4 +
+          "px'></img>",
+
+          "<p>De wedstrijd zal bestaan uit vier rondes. In elke ronde zullen we je naar achttien locaties rond het eiland varen (zie de linker afbeelding hieronder), en op elke locatie " +
+          "zal je tien kooi&#235;n mogen laten vallen (zie de rechter afbeelding hieronder).</p><p>Op het einde van de wedstrijd zal er nagegaan worden hoeveel krabben alle 50 deelnemers aan " +
+          "de wedstrijd gevangen hebben en zal de deelnemer die de meeste krabben gevangen heeft hiervoor beloond worden met een cadeaubon van bol.com ter waarde van &euro;50 (bovenop " +
+          "zijn/haar deelnemersverloning van &euro;10)!</p><img src = 'Images/Left_1.png' style = 'width: " + target_width / 4 +
+          "px'></img> <img src = 'Images/Right_1.png' style = 'width: " + target_width / 4 + "px'></img>",
+
+          "<p>Om je te helpen de wedstrijd te winnen, mag je nu eerst een korte oefenronde doen. Tijdens deze korte oefenronde zal je op drie verschillende locaties rond het eiland " +
+          "krabben mogen proberen vangen. <b>In tegenstelling tot tijdens de wedstrijd zal je niet weten op welke locatie rond het eiland je krabben aan het vangen bent</b> (zie de " +
+          "linker afbeelding hieronder). <b>Ook in regenstelling tot tijdens de wedstrijd zal de groep krabben al zichtbaar zijn terwijl je nog krabben aan het vangen bent. </b> " +
+          "(zie de rechter afbeelding hieronder).</p><p>Druk op de 'Volgende'-knop hieronder om aan de oefenronde te beginnen.</p><img src = 'Images/Left_2.png' style = 'width: " +
+          target_width / 4 + "px'></img> <img src = 'Images/Right_3.png' style = 'width: " + target_width / 4 + "px'></img>"],
+        show_clickable_nav: true,
+        button_label_next: "Volgende",
+        button_label_previous: "Vorige",
+        show_page_number: true,
+        page_label: "Pagina"
+      })
+    }
+
+    var pause_screen = {
+      type: jsPsychFullscreen,
+      fullscreen_mode: true,
+      message: function(){
+        round = round + 1
+        if (round == 1){
+          return ["<p>Je hebt het einde van de oefenronde bereikt. Nu ben je klaar om aan de wedstrijd te beginnen.</p><p>In tegenstelling tot tijdens de oefenronde zal de groep krabben " +
+            "tijdens de wedstrijd niet al zichtbaar zijn terwijl je nog krabben aan het vangen bent. Herinner je echter dat krabben rond dit eiland in groepen leven, met meer krabben in " +
+            "het centrum dan aan de buitenkant van de groep. De meeste krabben zullen dus dichtbij het centrum van hun groep uit het zand kruipen, ook al zullen sommigen dit dichtbij de " +
+            "buitenkant ervan doen. <b>Je zoekt dus best het centrum van de groep en laat de kooi&#235;n daar recht boven vallen.</b></p><p>Ook in tegenstelling tot tijdens de oefenronde zal " +
+            "je tijdens de wedstrijd weten op welke locatie rond het eiland je krabben aan het vangen bent. Herinner je dat groepen krabben verschillende groottes kunnen hebben op " +
+            "verschillende locaties rond het eiland. <b> Op sommige locaties rond het eiland zullen krabben dus meer verspreid over het scherm uit het zand kruipen dan op andere. Je " +
+            "onthoudt dus best waar rond het eiland je krabben aan het vangen bent.</b></p><p>Klik op de 'Volgende'-knop hieronder om terug te keren naar fullscreen modus en door te gaan " +
+            "naar de eerste ronde van de wedstrijd.</p></p><p>Veel succes!</p>"]
+        } else if (round == 2){
+          return ["<p>Je hebt het einde van de eerste ronde bereikt. Neem gerust een korte pauze.</p><p>In tussentijd kan je hieronder zien hoeveel krabben je reeds gevangen hebt per " +
+            "ronde.</p><p> - Eerste ronde: " + crab_count_list[0] + "</p><p> - Tweede ronde: /</p><p> - Derde ronde: /</p><p> - Vierde ronde: /</p><p>Klik op " +
+            "de 'Volgende'-knop hieronder om terug te keren naar fullscreen modus en door te gaan naar de tweede ronde.</p>"]
+        } else if (round == 3){
+          return ["<p>Je hebt het einde van de tweede ronde bereikt. Neem gerust een korte pauze.</p><p>In tussentijd kan je hieronder zien hoeveel krabben je reeds gevangen hebt per " +
+            "ronde.</p><p> - Eerste ronde: " + crab_count_list[0] + "</p><p> - Tweede ronde: " + crab_count_list[1] + "</p><p> - Derde ronde: /</p><p> - Vierde ronde: /</p>" +
+            "<p><b>Vanaf nu gaan we ook naar een aantal locaties varen waar we voorheen nog niet naartoe vaarden. Omdat we hier volgens de regels van de wedstrijd eigenlijk geen krabben mogen vangen, " +
+            "zal je hier echter slechts twee kooi&#235;n mogen laten vallen en zullen we niet wachten tot de tweede kooi de bodem bereikt heeft om verder te varen. Achter de schermen " +
+            "zal de kooi echter verder zinken en krabben vangen die mee zullen gerekend worden in je totaalscore, zoals op de andere locaties. Je gaat hier dus best op dezelfde manier te werk " +
+            "als op de andere locaties.</b></p><p>Klik op de 'Volgende'-knop hieronder om terug te keren naar fullscreen modus en door te gaan naar de derde ronde.</p>"]
+        } else {
+          return ["<p>Je hebt het einde van de derde ronde bereikt. Neem gerust een korte pauze.</p><p>In tussentijd kan je hieronder zien hoeveel krabben je reeds gevangen hebt per " +
+            "ronde.</p><p> - Eerste ronde: " + crab_count_list[0] + "</p><p> - Tweede ronde: " + crab_count_list[1] + "</p><p> - Derde ronde: " + crab_count_list[2] + "</p><p> - Vierde " +
+            "ronde: /</p><p>Klik op de 'Volgende'-knop hieronder om terug te keren naar fullscreen modus en door te gaan naar de vierde en laatste ronde.</p>"]
+        }
+      },
+      button_label: "Volgende"
+    }
+
+    var fixation = {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: function(){
+        fixation_loop_count = fixation_loop_count + 1
+        if (practice == 0){
+          if (fixation_loop_count == 1){
+            block_number = block_number + 1
+            target_angle = 0
+            if (block_number == 1){
+              fixation_angle = fixation_angle_list[block_list[block_number - 1]]
+              tempo_list = [30, 90, 150, 210, 270, 330]
+              index = tempo_list.indexOf(fixation_angle)
+              tempo_list.splice(index, 1)
+              previous_fixation_angle = jsPsych.randomization.sampleWithoutReplacement(tempo_list, 1)[0]
+              boat_x_coord = screen.width / 2 + fixation_radius * Math.cos(previous_fixation_angle * Math.PI / 180) - boat_width / 2
+              boat_y_coord = screen.height / 2 + fixation_radius * -Math.sin(previous_fixation_angle * Math.PI / 180) - 0.619 * boat_width / 2
+            } else {
+              previous_fixation_angle = fixation_angle
+              fixation_angle = fixation_angle_list[block_list[block_number - 1]]
+            }
+            if (fixation_angle - previous_fixation_angle > 0 && fixation_angle - previous_fixation_angle <= 180){
+              direction = 0
+            } else if (fixation_angle - previous_fixation_angle > 180){
+              direction = 1
+            } else if (fixation_angle - previous_fixation_angle < 0 && fixation_angle - previous_fixation_angle > -180){
+              direction = 1
+            } else {
+              direction = 0
+            }
+          } else if (fixation_loop_count > 60 && fixation_loop_count <=240){
+            if (direction == 0){
+              if (previous_fixation_angle == 360){
+                previous_fixation_angle = 0
+              }
+              previous_fixation_angle = previous_fixation_angle + 1
+            } else {
+              previous_fixation_angle = previous_fixation_angle - 1
+              if (previous_fixation_angle == 0){
+                previous_fixation_angle = 360
+              }
+            }
+            if (previous_fixation_angle != fixation_angle){
+              boat_x_coord = screen.width / 2 + fixation_radius * Math.cos(previous_fixation_angle * Math.PI / 180) - boat_width / 2
+              boat_y_coord = screen.height / 2 + fixation_radius * -Math.sin(previous_fixation_angle * Math.PI / 180) - 0.619 * boat_width / 2
+            } else {
+              fixation_loop_count = 240
+              boat_x_coord = screen.width / 2 + fixation_radius * Math.cos(fixation_angle * Math.PI / 180) - boat_width / 2
+              boat_y_coord = screen.height / 2 + fixation_radius * -Math.sin(fixation_angle * Math.PI / 180) - 0.619 * boat_width / 2
+            }
+          }
+        }
+        if (fixation_loop_count == 300){
+          if (practice == 0){
+            prior_sigma = prior_sigma_list[block_list[block_number - 1]]
+            do {
+              sampling_mu = normalRandom(screen.width / 2, prior_sigma)
+            } while (sampling_mu < screen.width / 2 - 1.65 * prior_sigma || sampling_mu > screen.width / 2 + 1.65 * prior_sigma)
+            sampling_sigma = sampling_sigma_list[block_list[block_number - 1]]
+          } else if (practice == 1){
+            sampling_mu = screen.width / 2 - max_sigma
+            sampling_sigma = min_sigma
+            practice = 2
+          } else if (practice == 2){
+            sampling_mu = screen.width / 2 + med_sigma
+            sampling_sigma = med_sigma
+            practice = 3
+          } else if (practice == 3){
+            sampling_mu = screen.width / 2 - min_sigma
+            sampling_sigma = max_sigma
+            practice = 4
+          }
+        }
+
+        output = "<img src = 'Images/Fixation.png' style = 'width: " + target_width + "px; position: fixed; left: 0px; top: 0px'></img>"
+        if (practice == 0){
+          output = output + "<img src = 'Images/Boat.png' style = 'width: " + boat_width + "px; position: fixed; left: " + boat_x_coord + "px; top: " + boat_y_coord + "px'></img>"
+        }
+        return output
+      },
+      choices: ["NO_KEYS"],
+      trial_duration: 15
+    }
+
+    var fixation_loop = {
+      timeline: [fixation],
+      loop_function: function(){
+        if (fixation_loop_count == 300){
+          if (practice == 0){
+            fixation_loop_count = 0
+          } else {
+            fixation_loop_count = 180
+          }
+          return false
+        } else {
+          return true
+        }
+      }
+    }
+
+    var target = {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: function(){
+        target_loop_count = target_loop_count + 1
+        if (target_loop_count == 1){
+          trial_number = trial_number + 1
+          cage_y_coord = screen.height * 0.32
+          if (trial_number == 1){
+            if (practice == 0){
+              dot_x_coord = screen.width / 2 + target_radius * Math.cos(fixation_angle * Math.PI / 180) - dot_width / 2
+              dot_y_coord = 0.165 * screen.height + target_radius * -Math.sin(fixation_angle * Math.PI / 180) - dot_width / 2
+            }
+            cage_x_coord = screen.width / 2 - cage_width / 2
+            cage_location = 50
+          }
+          end_target_loop = 0
+          register_responses = 1
+          presentation_time = new Date().getTime()
+        }
+
+        output = "<img src = 'Images/Target.png' style = 'width: " + target_width + "px; position: fixed; left: 0px; top: 0px'></img>" +
+          "<img src = 'Images/Cage.png' style = 'width: " + cage_width + "px; position: fixed; left: " + cage_x_coord + "px; top: " + cage_y_coord + "px'></img>"
+        if (practice == 0){
+          output = output + lineDraw()
+          if ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(target_loop_count % 24)){
+            output = output + "<img src = 'Images/Dot.png' style = 'width: " + dot_width + "px; position: fixed; left: " + dot_x_coord + "px; top: " + dot_y_coord + "px'></img>"
+          }
+        } else {
+          output = output + crabDistribution()
+        }
+        if (trial_number != 1){
+          output = output + "<img src = 'Images/Heap.png' style = 'width: " + heap_width + "px; position: fixed; left: " + heap_x_coord + "px; bottom: " + heap_y_coord + "px'></img>"
+        }
+        return output
+      },
+      choices: ["f", "j", " "],
+      trial_duration: 15,
+      response_ends_trial: false
+    }
+
+    var process_responses = function(info){
+      if (register_responses == 1){
+        if (jsPsych.pluginAPI.compareKeys(info.key, " ")){
+          response_time = new Date().getTime() - presentation_time
+          target_loop_count = 0
+          feedback_loop_count = 0
+          end_target_loop = 1
+          register_responses = 0
+        } else if (jsPsych.pluginAPI.compareKeys(info.key, "f")){
+          cage_x_coord = cage_x_coord - 0.01 * screen.width
+          cage_location = cage_location - 1
+        } else if (jsPsych.pluginAPI.compareKeys(info.key, "j")){
+          cage_x_coord = cage_x_coord + 0.01 * screen.width
+          cage_location = cage_location + 1
+        }
+        if (cage_x_coord < 0){
+          cage_x_coord = 0
+          cage_location = 0
+        }
+        if (cage_x_coord > screen.width - cage_width){
+          cage_x_coord = screen.width - cage_width
+          cage_location = 100
+        }
+      }
+    }
+
+    var response_listener = jsPsych.pluginAPI.getKeyboardResponse({
+        callback_function: process_responses,
+        valid_responses: ["f", "j", " "],
+        allow_held_key: true,
+        persist: true
+    })
+
+    var target_loop = {
+      timeline: [target],
+      loop_function: function(){
+        if (end_target_loop == 1){
+          return false
+        } else {
+          return true
+        }
+      }
+    }
+
+    var feedback = {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: function(){
+        feedback_loop_count = feedback_loop_count + 1
+        if (feedback_loop_count == 1){
+          end_feedback_loop = 0
+        } else if (feedback_loop_count == 31){
+          if (block_list[block_number - 1] % 2 == 1){
+            min = Math.ceil(0.1 * screen.width)
+            max = Math.floor(0.9 * screen.width) + 1
+            crab_location = Math.floor(Math.random() * (max - min) + min)
+          } else {
+            do {
+              crab_location = normalRandom(sampling_mu, sampling_sigma)
+            } while (crab_location < sampling_mu - 1.65 * sampling_sigma || crab_location > sampling_mu + 1.65 * sampling_sigma)
+          }
+          crab_x_coord = [0, 0, 0, 0, 0]
+          for (crab = 0; crab < 5; crab++){
+            crab_x_coord[crab] = crab_location - crab_width / 2
+          }
+          heap_x_coord = crab_location - heap_width / 2
+          heap_list[trial_number - 1] = heap_x_coord
+        }
+        if (feedback_loop_count <= 60){
+          cage_y_coord = cage_y_coord + 0.00755 * screen.height
+          if (feedback_loop_count > 42){
+            crab_x_coord[0] = crab_x_coord[0] - 0.2 * crab_width
+            crab_x_coord[1] = crab_x_coord[1] + 0.2 * crab_width
+          }
+          if (feedback_loop_count > 51){
+            crab_x_coord[2] = crab_x_coord[2] - 0.2 * crab_width
+            crab_x_coord[3] = crab_x_coord[3] + 0.2 * crab_width
+          }
+        } else {
+          if (feedback_loop_count == 61){
+            crabs_caught = 0
+          }
+          for (crab = 0; crab < 5; crab++){
+            if (crab_x_coord[crab] + crab_width / 2 <= cage_x_coord){
+              crab_x_coord[crab] = crab_x_coord[crab] - 0.2 * crab_width
+            } else if (crab_x_coord[crab] + crab_width / 2 >= cage_x_coord + cage_width){
+              crab_x_coord[crab] = crab_x_coord[crab] + 0.2 * crab_width
+            } else {
+              if (feedback_loop_count == 61){
+                crabs_caught = crabs_caught + 1
+              }
+            }
+          }
+        }
+
+        output = "<img src = 'Images/Feedback.png' style = 'width: " + feedback_width + "px; position: fixed; left: 0px; top: 0px'></img>"
+        if (practice == 0){
+          output = output + lineDraw()
+          if ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(feedback_loop_count % 24)){
+            output = output + "<img src = 'Images/Dot.png' style = 'width: " + dot_width + "px; position: fixed; left: " + dot_x_coord + "px; top: " + dot_y_coord + "px'></img>"
+          }
+        } else {
+          output = output + crabDistribution()
+        }
+        if (trial_number != 1){
+          output = output + "<img src = 'Images/Heap.png' style = 'width: " + heap_width + "px; position: fixed; left: " + heap_x_coord + "px; bottom: " + heap_y_coord + "px'></img>"
+        }
+        if (feedback_loop_count > 30){
+          for (crab = 0; crab < 5; crab++){
+            output = output + "<img src = 'Images/Crab.png' style = 'width: " + crab_width + "px; position: fixed; left: " + crab_x_coord[crab] + "px; bottom: " + crab_y_coord + "px'></img>"
+          }
+        }
+        output = output + "<img src = 'Images/Cage.png' style = 'width: " + cage_width + "px; position: fixed; left: " + cage_x_coord + "px; top: " + cage_y_coord + "px'></img>"
+        return output
+      },
+      choices: ["NO_KEYS"],
+      trial_duration: 15,
+      on_finish: function(data){
+        if (block_list[block_number - 1] % 2 == 1 & trial_number == 2 & feedback_loop_count == 15){
+          if (practice == 0){
+            crab_count_list[round-1] = crab_count_list[round-1] + jsPsych.randomization.sampleWithoutReplacement([1, 2, 2, 3, 3, 3, 4, 4, 5], 1)[0]
+          }
+          data.relevant = 1
+          data.block = block_number
+          data.trial_index = trial_number
+          data.trial_type = fixation_angle
+          data.mu = -1
+          data.sigma = Math.round(sampling_sigma / screen.width * 10000) / 100
+          data.response = cage_location
+          data.rt = response_time
+          data.stimulus = -1
+          data.reward = -1
+          end_feedback_loop = 1
+        } else if (feedback_loop_count == 90){
+          if (practice == 0){
+            crab_count_list[round-1] = crab_count_list[round-1] + crabs_caught
+          }
+          data.relevant = 1
+          data.block = block_number
+          data.trial_index = trial_number
+          data.trial_type = fixation_angle
+          if (block_list[block_number - 1] % 2 == 1){
+            data.mu = -1
+          } else {
+            data.mu = Math.round(sampling_mu / screen.width * 10000) / 100
+          }
+          data.sigma = Math.round(sampling_sigma / screen.width * 10000) / 100
+          data.response = cage_location
+          data.rt = response_time
+          data.stimulus = Math.round(crab_location / screen.width * 10000) / 100
+          data.reward = crabs_caught
+          end_feedback_loop = 1
+        }
+      }
+    }
+
+    var feedback_loop = {
+      timeline: [feedback],
+      loop_function: function(){
+        if (end_feedback_loop == 1){
+          return false
+        } else {
+          return true
+        }
+      }
+    }
+
+    var trial_loop = {
+      timeline: [target_loop, feedback_loop],
+      loop_function: function(){
+        if (block_list[block_number - 1] % 2 == 1 & trial_number == 2){
+          trial_number = 0
+          return false
+        } else if (trial_number == 10){
+          trial_number = 0
+          return false
+        } else {
+          return true
+       }
+      }
+    }
+
+    var meta_feedback = {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: function(){
+        meta_feedback_loop_count = meta_feedback_loop_count + 1
+        output = "<img src = 'Images/Feedback.png' style = 'width: " + feedback_width + "px; position: fixed; left: 0px; top: 0px'></img>"
+        if (practice == 0){
+          output = output + lineDraw()
+          if ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(meta_feedback_loop_count % 24)){
+            output = output + "<img src = 'Images/Dot.png' style = 'width: " + dot_width + "px; position: fixed; left: " + dot_x_coord + "px; top: " + dot_y_coord + "px'></img>"
+          }
+        }
+        output = output + crabDistribution() + heapDistribution()
+        return output
+      },
+      choices: ["NO_KEYS"],
+      trial_duration: 15,
+      on_finish: function(){
+        if (meta_feedback_loop_count == 180){
+          meta_feedback_loop_count = 0
+          if (practice == 4){
+            practice = 0
+            fixation_loop_count = 0
+          }
+        }
+      }
+    }
+
+    var meta_feedback_loop = {
+      timeline: [meta_feedback],
+      repetitions: 180
+    }
+
+    var meta_feedback_if_node = {
+      timeline: [meta_feedback_loop],
+      conditional_function: function(){
+        if (block_list[block_number - 1] % 2 == 1){
+          return false
+        } else {
+         return true
+       }
+      }
+    }
+
+    var practice_block_loop = {
+      timeline: [fixation_loop, trial_loop, meta_feedback_loop],
+      repetitions: 3
+    }
+
+    var short_block_loop = {
+      timeline: [fixation_loop, trial_loop, meta_feedback_loop],
+      repetitions: 18
+    }
+
+    var long_block_loop = {
+      timeline: [fixation_loop, trial_loop, meta_feedback_if_node],
+      repetitions: 36
+    }
+
+    if (practice == 1){
+      timeline.push({
+        timeline: [practice_block_loop, exit_fullscreen],
+        repetitions: 1
+      })
+    }
+    
+    timeline.push({
+      timeline: [pause_screen, short_block_loop, exit_fullscreen],
+      repetitions: 2
+    })
+
+    timeline.push({
+      timeline: [pause_screen, long_block_loop, exit_fullscreen],
+      repetitions: 2
+    })
+
+    timeline.push({
+      type: jsPsychCallFunction,
+      async: true,
+      func: function(done){
+        var filename = "Behavioural_Data_Participant_" + participant_number
+        var filedata = jsPsych.data.get().filter({relevant: 1}).csv()
+        var xhr = new XMLHttpRequest()
+        xhr.open('POST', 'write_data.php')
+        xhr.setRequestHeader('Content-Type', 'application/json')
+        xhr.onload = function(){
+          done()
+        }
+        xhr.send(JSON.stringify({filename: filename, filedata: filedata}))
+      }
+    })
+
+    timeline.push({
+      type: jsPsychInstructions,
+      pages: function(){
+        return ["<p>Je hebt het einde van de wedstrijd bereikt.<p></p>Hieronder kan je zien hoeveel krabben je gevangen hebt per ronde.</p><p> - Eerste ronde: " + crab_count_list[0] +
+          "</p><p> - Tweede ronde: " + crab_count_list[1] + "</p><p> - Derde ronde: " + crab_count_list[2] + "</p><p> - Vierde ronde: " + crab_count_list[3] +
+          "</p><p>De deelnemer die de meeste krabben gevangen heeft en dus de cadeaubon van bol.com ter waarde van &euro;50 gewonnen heeft, zal hier ten laatste " +
+          "volgende week van op de hoogte gebracht worden via e-mail.</p><p>" +
+          "<a href='https://docs.google.com/spreadsheets/d/1zlK8PAcAJEqB2yevD6bmVXUAY9Y6LrmtbAetz-f6La0/edit?usp=sharing'>Klik hier om het " +
+          "experiment te be&#235;indigen en je betalingsgegevens door te geven.</a> Je kan deze invullen in de onderste rij van het bestand dat je te zien zal krijgen zodra je op de " +
+          "link klikt. (Elke aanpassing aan het bestand wordt automatisch onmiddelijk opgeslaan.) <b>Dit is noodzakelijk voor de uitbetaling van je deelnemersverloning.</b></p><p>Bedankt voor je deelname!</p>"]
+      }
+    })
+
+    jsPsych.run(timeline)
+
+  </script>
+</html>
